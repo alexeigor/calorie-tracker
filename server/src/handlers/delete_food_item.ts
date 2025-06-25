@@ -1,7 +1,19 @@
 
+import { db } from '../db';
+import { foodItemsTable } from '../db/schema';
+import { eq } from 'drizzle-orm';
+
 export async function deleteFoodItem(foodItemId: number): Promise<boolean> {
-    // This is a placeholder declaration! Real code should be implemented here.
-    // The goal of this handler is deleting a food item from the database.
-    // It should return true if the item was successfully deleted, false if it didn't exist.
-    return false;
+  try {
+    const result = await db.delete(foodItemsTable)
+      .where(eq(foodItemsTable.id, foodItemId))
+      .execute();
+
+    // result.rowCount indicates how many rows were affected
+    // Handle the case where rowCount might be null
+    return (result.rowCount ?? 0) > 0;
+  } catch (error) {
+    console.error('Food item deletion failed:', error);
+    throw error;
+  }
 }

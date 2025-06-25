@@ -1,9 +1,23 @@
 
+import { db } from '../db';
+import { dailyCalorieEntriesTable } from '../db/schema';
 import { type DailyCalorieEntry } from '../schema';
+import { desc } from 'drizzle-orm';
 
 export async function getDailyCalorieEntries(): Promise<DailyCalorieEntry[]> {
-    // This is a placeholder declaration! Real code should be implemented here.
-    // The goal of this handler is fetching all daily calorie entries from the database,
-    // ordered by date descending to show most recent entries first.
-    return [];
+  try {
+    const results = await db.select()
+      .from(dailyCalorieEntriesTable)
+      .orderBy(desc(dailyCalorieEntriesTable.date))
+      .execute();
+
+    // Convert date strings to Date objects to match schema
+    return results.map(entry => ({
+      ...entry,
+      date: new Date(entry.date)
+    }));
+  } catch (error) {
+    console.error('Failed to get daily calorie entries:', error);
+    throw error;
+  }
 }

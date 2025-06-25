@@ -1,15 +1,37 @@
 
+import { db } from '../db';
+import { dailyCalorieEntriesTable } from '../db/schema';
 import { type CreateDailyCalorieEntryInput, type DailyCalorieEntry } from '../schema';
+import { eq } from 'drizzle-orm';
 
-export async function createDailyCalorieEntry(input: CreateDailyCalorieEntryInput): Promise<DailyCalorieEntry> {
-    // This is a placeholder declaration! Real code should be implemented here.
-    // The goal of this handler is creating a new daily calorie entry and persisting it in the database.
-    // It should also check if an entry for the same date already exists and handle accordingly.
-    return Promise.resolve({
-        id: 0, // Placeholder ID
-        date: input.date,
-        total_calories: input.total_calories,
-        created_at: new Date(),
-        updated_at: new Date()
-    } as DailyCalorieEntry);
-}
+export const createDailyCalorieEntry = async (input: CreateDailyCalorieEntryInput): Promise<DailyCalorieEntry> => {
+  try {
+    // Check if an entry for the same date already exists
+    const existingEntry = await db.select()
+      .from(dailyCalorieEntriesTable)
+      .where(eq(dailyCalorieEntriesTable.date, input.date.toISOString().split('T')[0]))
+      .execute();
+
+    if (existingEntry.length > 0) {
+      throw new Error(`Daily calorie entry for date ${input.date.toISOString().split('T')[0]} already exists`);
+    }
+
+    // Insert new daily calorie entry
+    const result = await db.insert(dailyCalorieEntriesTable)
+      .values({
+        date: input.date.toISOString().split('T')[0],
+        total_calories: input.total_calories
+      })
+      .returning()
+      .execute();
+
+    const entry = result[0];
+    return {
+      ...entry,
+      date: new Date(entry.date + 'T00:00:00.000Z') // Convert date string back to Date object
+    };
+  } catch (error) {
+    console.error('Daily calorie entry creation failed:', error);
+    throw error;
+  }
+};

@@ -1,15 +1,34 @@
 
+import { db } from '../db';
+import { dailyCalorieEntriesTable, foodItemsTable } from '../db/schema';
 import { type CreateFoodItemInput, type FoodItem } from '../schema';
+import { eq } from 'drizzle-orm';
 
-export async function createFoodItem(input: CreateFoodItemInput): Promise<FoodItem> {
-    // This is a placeholder declaration! Real code should be implemented here.
-    // The goal of this handler is creating a new food item associated with a daily calorie entry.
-    // It should validate that the daily_entry_id exists before creating the food item.
-    return Promise.resolve({
-        id: 0, // Placeholder ID
+export const createFoodItem = async (input: CreateFoodItemInput): Promise<FoodItem> => {
+  try {
+    // Validate that the daily entry exists
+    const dailyEntry = await db.select()
+      .from(dailyCalorieEntriesTable)
+      .where(eq(dailyCalorieEntriesTable.id, input.daily_entry_id))
+      .execute();
+
+    if (dailyEntry.length === 0) {
+      throw new Error(`Daily calorie entry with id ${input.daily_entry_id} not found`);
+    }
+
+    // Insert food item record
+    const result = await db.insert(foodItemsTable)
+      .values({
         daily_entry_id: input.daily_entry_id,
         food_name: input.food_name,
-        calories: input.calories,
-        created_at: new Date()
-    } as FoodItem);
-}
+        calories: input.calories
+      })
+      .returning()
+      .execute();
+
+    return result[0];
+  } catch (error) {
+    console.error('Food item creation failed:', error);
+    throw error;
+  }
+};
